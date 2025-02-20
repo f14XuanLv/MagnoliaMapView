@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EnderMagnolia Map Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            background: rgb(23,33,42);
+        }
+        #map {
+            position: absolute;
+            transform-origin: 0 0;
+            cursor: grab;
+            opacity: 0;
+            transform: scale(0.12);
+            transition: opacity 0.3s;
+        }
+        #map.loaded {
+            opacity: 1;
+        }
+        #map.grabbing {
+            cursor: grabbing;
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .controls button {
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .zoom-level {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <img id="map" src="https://mapping.526404.xyz/map.jpg" draggable="false">
+        <div class="controls">
+            <button onclick="zoomIn()">+</button>
+            <button onclick="zoomOut()">-</button>
+            <button onclick="resetView()">R</button>
+        </div>
+        <div class="zoom-level">12%</div>
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        const map = document.getElementById('map');
+        const zoomLevel = document.querySelector('.zoom-level');
+        let scale = 0.12;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX, startY;
+        let lastX = translateX;
+        let lastY = translateY;
+
+        // 更新变换
+        function updateTransform() {
+            map.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            zoomLevel.textContent = `${Math.round(scale * 100)}%`;
+        }
+
+        // 缩放功能
+        function zoomIn() {
+            scale = Math.min(scale * 1.2, 5);
+            updateTransform();
+        }
+
+        function zoomOut() {
+            scale = Math.max(scale / 1.2, 0.12);
+            updateTransform();
+        }
+
+        // 重置视图
+        function resetView() {
+            scale = 0.12;
+            centerMap();
+        }
+
+        // 居中地图
+        function centerMap() {
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const mapWidth = map.clientWidth;
+            const mapHeight = map.clientHeight;
+            
+            translateX = (containerWidth - mapWidth * scale) / 2;
+            translateY = (containerHeight - mapHeight * scale) / 2;
+            updateTransform();
+        }
+
+        // 鼠标拖动
+        map.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            map.classList.add('grabbing');
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            map.classList.remove('grabbing');
+            lastX = translateX;
+            lastY = translateY;
+        });
+
+        // 鼠标滚轮缩放
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const oldX = (mouseX - translateX) / scale;
+            const oldY = (mouseY - translateY) / scale;
+
+            if (e.deltaY < 0) {
+                scale = Math.min(scale * 1.1, 5);
+            } else {
+                scale = Math.max(scale / 1.1, 0.12);
+            }
+
+            translateX = mouseX - oldX * scale;
+            translateY = mouseY - oldY * scale;
+
+            updateTransform();
+        }, { passive: false });
+
+        // 图片加载完成后的处理
+        map.addEventListener('load', function() {
+            centerMap();
+            map.classList.add('loaded');
+        });
+    </script>
+</body>
+</html>
